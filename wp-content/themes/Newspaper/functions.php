@@ -36,6 +36,13 @@ function register_spice_region_taxonomy() {
         'show_in_rest' => true,
         'show_in_nav_menus' => true,
         'hierarchical' => true,
+        'publicly_queryable' => true,
+        'query_var' => true,
+        'show_admin_column' => true,
+        'rewrite' => array(
+            'slug' => 'spice-region',
+            'with_front' => false
+        ),
     ));
 }
 add_action('init', 'register_spice_region_taxonomy');
@@ -106,15 +113,544 @@ add_shortcode('spice_region_debug', 'spice_region_debug_shortcode');
 
 
 
-// 3️⃣ Register the TagDiv Composer custom element
-add_action('td_composer_loaded', function() {
+// Shortcode: [spice_region_posts terms="lemongrass,cumin" posts_per_page="6" operator="IN"]
+add_shortcode('spice_region_posts', function($atts) {
+    $atts = shortcode_atts(array(
+        'terms' => '',            // comma-separated slugs
+        'operator' => 'IN',       // IN | AND | NOT IN
+        'posts_per_page' => 3,
+        'post_type' => 'post',
+        'columns' => 1,           // 1-6
+        'image_size' => 'full',   // thumbnail|medium|large|full or WxH like 400x300
+        'ratio' => '1600x872',    // widthxheight used to set CSS aspect ratio
+        'show_excerpt' => true,
+        'no_watermark' => false,
+    ), $atts, 'spice_region_posts');
 
-    if (!function_exists('tdc_add_custom_element')) return;
+    $termSlugs = array_filter(array_map('trim', explode(',', strtolower($atts['terms']))));
+    if (empty($termSlugs)) {
+        return '';
+    }
 
+    $q = new WP_Query(array(
+        'post_type' => $atts['post_type'],
+        'posts_per_page' => intval($atts['posts_per_page']),
+        'ignore_sticky_posts' => true,
+        'tax_query' => array(
+            array(
+                'taxonomy' => 'spice_region',
+                'field' => 'slug',
+                'terms' => $termSlugs,
+                'operator' => in_array($atts['operator'], array('IN','AND','NOT IN'), true) ? $atts['operator'] : 'IN',
+            )
+        )
+    ));
+
+    if (!$q->have_posts()) {
+        wp_reset_postdata();
+        return '';
+    }
+
+    $columns = max(1, min(6, intval($atts['columns'])));
+    $imageSize = trim($atts['image_size']);
+    if (preg_match('/^\\d+x\\d+$/', $imageSize)) {
+        list($w, $h) = array_map('intval', explode('x', $imageSize));
+        $imageSize = array($w, $h);
+    }
+    $ratio = '56.25%';
+    if (!empty($atts['ratio']) && preg_match('/^(\\d+)x(\\d+)$/', trim($atts['ratio']), $m)) {
+        $rw = max(1, intval($m[1]));
+        $rh = max(1, intval($m[2]));
+        $ratio = number_format(($rh / $rw) * 100, 4, '.', '') . '%';
+    }
+
+    // header for the first term (icon next to title, centered vertically, h=50)
+    $header_html = '';
+    $first_term = get_term_by('slug', $termSlugs[0], 'spice_region');
+    if ($first_term && !is_wp_error($first_term)) {
+        $subtitle = function_exists('get_field') ? get_field('subtitle', 'spice_region_' . $first_term->term_id) : '';
+        $icon = function_exists('get_field') ? get_field('icon', 'spice_region_' . $first_term->term_id) : '';
+        $icon_url = is_array($icon) && !empty($icon['url']) ? $icon['url'] : '';
+        $header_html = '<div class="spice-region-header" style="display:flex;align-items:center;justify-content:center;gap:14px;margin:0 10px 10px;text-align:center;">'
+            . '<div style="display:flex;flex-direction:column;justify-content:center;align-items:center;">'
+                . '<div style="color:#a40d02;font-weight:700;font-size:28px;line-height:1;font-family:Fira Sans,sans-serif !important;">' . esc_html($first_term->name) . '</div>'
+                . ($subtitle ? '<div style="margin-top:6px;color:#a40d02;font-weight:600;text-transform:capitalize;line-height:1.2;font-family:Fira Sans,sans-serif !important;">' . esc_html($subtitle) . '</div>' : '')
+            . '</div>'
+            . ($icon_url ? '<img src="' . esc_url($icon_url) . '" alt="' . esc_attr($first_term->name) . '" style="height:50px;width:auto;object-fit:contain;">' : '')
+          . '</div>';
+    }
+
+    ob_start();
+    echo '<div class="spice-region-posts" style="margin:-10px;">' . $header_html . '
+            <style>
+                .spice-region-grid{display:flex;flex-wrap:wrap;margin:-10px}
+                .spice-region-card{padding:10px;box-sizing:border-box}
+                .spice-region-card-inner{background:#fff;border:0}
+                .spice-region-thumb img{width:100%;height:auto;display:block}
+                .spice-region-title{font-weight:600;margin:8px 0 6px 0;padding:0;text-align:left;font-family:Merriweather,serif !important}
+                .spice-region-title a{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none}
+                .spice-region-excerpt{margin:0 0 12px 0;padding:0;color:#555;font-size:14px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-align:left;font-family:Merriweather,serif !important;line-height:1.4}
+                .spice-region-posts .td-post-category{margin:0 0 -15px 0;padding:8px 12px 7px;background-color:#ffffff;color:#000000;font-family:Fira Sans !important;font-size:15px !important;line-height:1 !important;font-weight:600 !important;text-transform:uppercase !important;letter-spacing:1px !important;text-decoration:none !important;display:inline-block !important;position:absolute;left:0px;bottom:3px;z-index:2;}
+            </style>';
+    echo '<div class="spice-region-grid">';
+    while ($q->have_posts()) {
+        $q->the_post();
+        $colPct = 100 / $columns;
+        echo '<div class="spice-region-card" style="width:' . esc_attr($colPct) . '%">';
+            echo '<div class="spice-region-card-inner">';
+                // resolve thumbnail URL; optionally use Easy Watermark backup to avoid watermark
+                $thumb_url = get_the_post_thumbnail_url(get_the_ID(), $imageSize);
+                if (!empty($atts['no_watermark'])) {
+                    $thumb_id = get_post_thumbnail_id();
+                    if ($thumb_id) {
+                        $file = get_attached_file($thumb_id);
+                        $uploads = wp_get_upload_dir();
+                        if ($file && $uploads && strpos($file, $uploads['basedir']) === 0) {
+                            $rel = ltrim(substr($file, strlen($uploads['basedir'])), '/');
+                            $backup_path = WP_CONTENT_DIR . '/ew-backup/' . $rel;
+                            if (file_exists($backup_path)) {
+                                $thumb_url = content_url('ew-backup/' . str_replace(['\\','//'], ['/', '/'], $rel));
+                            }
+                        }
+                    }
+                }
+                $thumb_style = $thumb_url ? ' style="background-image: url(\'' . esc_url($thumb_url) . '\');background-size:cover;background-position:center;display:block;width:100%;padding-top:' . $ratio . ';"' : '';
+                echo '<div class="td-image-container" style="position:relative;">';
+                    // show WP category at bottom-left
+                    $cats = get_the_category();
+                    if (!empty($cats)) {
+                        $cat = $cats[0];
+                        $cat_link = get_category_link($cat->term_id);
+                        echo '<a href="' . esc_url($cat_link) . '" class="td-post-category" style="position:absolute;left:8px;bottom:8px;z-index:2;">' . esc_html($cat->name) . '</a>';
+                    }
+                    echo '<div class="td-module-thumb">'
+                        . '<a href="' . esc_url(get_permalink()) . '" rel="bookmark" class="td-image-wrap" title="' . esc_attr(get_the_title()) . '">'
+                        . '<span class="entry-thumb td-thumb-css"' . $thumb_style . '></span>'
+                        . '</a>'
+                    . '</div>';
+                echo '</div>';
+                echo '<h3 class="spice-region-title"><a href="' . esc_url(get_permalink()) . '">' . esc_html(get_the_title()) . '</a></h3>';
+                if (!empty($atts['show_excerpt'])) {
+                    echo '<p class="spice-region-excerpt">' . esc_html(wp_trim_words(get_the_excerpt(), 20)) . '</p>';
+                }
+            echo '</div>';
+        echo '</div>';
+    }
+    echo '</div></div>';
+    wp_reset_postdata();
+
+    return ob_get_clean();
+});
+
+// Shortcode: [spice_region_current_posts] - auto-detect current spice_region term and list latest 3 posts
+add_shortcode('spice_region_current_posts', function($atts) {
+    $atts = shortcode_atts(array(
+        'posts_per_page' => 3,
+        'columns' => 1,
+        'image_size' => 'medium',
+        'show_excerpt' => true,
+        'post_type' => 'post',
+    ), $atts, 'spice_region_current_posts');
+
+    // detect current term slug from archive or single
+    $termSlugs = array();
+    if (is_tax('spice_region')) {
+        $term = get_queried_object();
+        if ($term && !is_wp_error($term)) {
+            $termSlugs[] = $term->slug;
+        }
+    } else if (is_single()) {
+        $terms = wp_get_post_terms(get_the_ID(), 'spice_region');
+        if (!is_wp_error($terms) && !empty($terms)) {
+            $termSlugs[] = $terms[0]->slug; // first term
+        }
+    }
+
+    if (empty($termSlugs)) {
+        return '';
+    }
+
+    $q = new WP_Query(array(
+        'post_type' => $atts['post_type'],
+        'posts_per_page' => intval($atts['posts_per_page']),
+        'ignore_sticky_posts' => true,
+        'tax_query' => array(
+            array(
+                'taxonomy' => 'spice_region',
+                'field' => 'slug',
+                'terms' => $termSlugs,
+                'operator' => 'IN',
+            )
+        )
+    ));
+
+    if (!$q->have_posts()) {
+        wp_reset_postdata();
+        return '';
+    }
+
+    $columns = max(1, min(6, intval($atts['columns'])));
+    $imageSize = trim($atts['image_size']);
+    if (preg_match('/^\\d+x\\d+$/', $imageSize)) {
+        list($w, $h) = array_map('intval', explode('x', $imageSize));
+        $imageSize = array($w, $h);
+    }
+
+    ob_start();
+    echo '<div class="spice-region-posts" style="margin:-10px;">
+            <style>
+                .spice-region-grid{display:flex;flex-wrap:wrap;margin:-10px}
+                .spice-region-card{padding:10px;box-sizing:border-box}
+                .spice-region-card-inner{background:#fff;border:0}
+                .spice-region-thumb img{width:100%;height:auto;display:block}
+                .spice-region-title{font-weight:600;margin:8px 0 6px 0;padding:0;text-align:left;font-family:Merriweather,serif !important}
+                .spice-region-title a{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none}
+                .spice-region-excerpt{margin:0 0 12px 0;padding:0;color:#555;font-size:14px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-align:left;font-family:Merriweather,serif !important;line-height:1.4}
+                .spice-region-posts .td-post-category{margin:0 0 -15px 0;padding:8px 12px 7px;background-color:#ffffff;color:#000000;font-family:Fira Sans !important;font-size:15px !important;line-height:1 !important;font-weight:600 !important;text-transform:uppercase !important;letter-spacing:1px !important;text-decoration:none !important;display:inline-block !important;position:absolute;left:0px;bottom:3px;z-index:2;}
+            </style>';
+    echo '<div class="spice-region-grid">';
+    while ($q->have_posts()) {
+        $q->the_post();
+        $colPct = 100 / $columns;
+        echo '<div class="spice-region-card" style="width:' . esc_attr($colPct) . '%">';
+            echo '<div class="spice-region-card-inner">';
+                $thumb_url = get_the_post_thumbnail_url(get_the_ID(), $imageSize);
+                $thumb_style = $thumb_url ? ' style="background-image: url(\'' . esc_url($thumb_url) . '\')"' : '';
+                $sp_terms = wp_get_post_terms(get_the_ID(), 'spice_region');
+                echo '<div class="td-image-container" style="position:relative;">';
+                    if (!is_wp_error($sp_terms) && !empty($sp_terms)) {
+                        $sp = $sp_terms[0];
+                        $sp_link = get_term_link($sp);
+                        echo '<a href="' . esc_url($sp_link) . '" class="td-post-category" style="position:absolute;left:8px;top:8px;z-index:2;">' . esc_html($sp->name) . '</a>';
+                    }
+                    echo '<div class="td-module-thumb">'
+                        . '<a href="' . esc_url(get_permalink()) . '" rel="bookmark" class="td-image-wrap" title="' . esc_attr(get_the_title()) . '">'
+                        . '<span class="entry-thumb td-thumb-css"' . $thumb_style . '></span>'
+                        . '</a>'
+                    . '</div>';
+                echo '</div>';
+                echo '<h3 class="spice-region-title"><a href="' . esc_url(get_permalink()) . '">' . esc_html(get_the_title()) . '</a></h3>';
+                if (!empty($atts['show_excerpt'])) {
+                    echo '<p class="spice-region-excerpt">' . esc_html(wp_trim_words(get_the_excerpt(), 20)) . '</p>';
+                }
+            echo '</div>';
+        echo '</div>';
+    }
+    echo '</div></div>';
+    wp_reset_postdata();
+
+    return ob_get_clean();
+});
+
+// Shortcode: [latest_post_banner] - Homepage cover banner with latest post
+add_shortcode('latest_post_banner', function($atts) {
+    $atts = shortcode_atts(array(
+        'posts_per_page' => 1,
+        'post_type' => 'post',
+        'image_size' => 'full',
+        'ratio' => '1600x872',
+        'no_watermark' => false,
+        'text_color' => '#ffffff',
+        'overlay_color' => 'rgba(0,0,0,0.4)',
+    ), $atts, 'latest_post_banner');
+
+    $q = new WP_Query(array(
+        'post_type' => $atts['post_type'],
+        'posts_per_page' => intval($atts['posts_per_page']),
+        'orderby' => 'date',
+        'order' => 'DESC',
+        'ignore_sticky_posts' => true,
+        'no_found_rows' => true,
+    ));
+
+    if (!$q->have_posts()) {
+        return '';
+    }
+
+    ob_start();
+    $q->the_post();
+
+    $imageSize = trim($atts['image_size']);
+    if (preg_match('/^\\d+x\\d+$/', $imageSize)) {
+        list($w, $h) = array_map('intval', explode('x', $imageSize));
+        $imageSize = array($w, $h);
+    }
+
+    // Calculate aspect ratio
+    $ratio_css = '56.25%';
+    if (!empty($atts['ratio']) && preg_match('/^(\\d+)x(\\d+)$/', trim($atts['ratio']), $m)) {
+        $rw = max(1, intval($m[1]));
+        $rh = max(1, intval($m[2]));
+        $ratio_css = (round($rh / $rw, 4) * 100) . '%';
+    }
+
+    // Get thumbnail URL
+    $thumb_url = get_the_post_thumbnail_url(get_the_ID(), $imageSize);
+    if (!empty($atts['no_watermark'])) {
+        $thumb_id = get_post_thumbnail_id();
+        if ($thumb_id) {
+            $file = get_attached_file($thumb_id);
+            $uploads = wp_get_upload_dir();
+            if ($file && $uploads && strpos($file, $uploads['basedir']) === 0) {
+                $rel = ltrim(substr($file, strlen($uploads['basedir'])), '/');
+                $backup_path = WP_CONTENT_DIR . '/ew-backup/' . $rel;
+                if (file_exists($backup_path)) {
+                    $thumb_url = content_url('ew-backup/' . str_replace(['\\','//'], ['/', '/'], $rel));
+                }
+            }
+        }
+    }
+
+    $banner_style = $thumb_url ? 'background-image: url(\'' . esc_url($thumb_url) . '\');' : '';
+    $banner_style .= 'background-size: cover; background-position: center;';
+
+    ?>
+    <div class="latest-post-banner-wrap" style="margin-bottom: 20px;">
+        <style>
+            .latest-post-banner {
+                position: relative;
+                width: 100%;
+                padding-top: <?php echo esc_attr($ratio_css); ?>;
+                background-image: <?php echo $thumb_url ? 'url(\'' . esc_url($thumb_url) . '\')' : 'none'; ?>;
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                display: flex;
+                align-items: flex-end;
+                justify-content: center;
+                overflow: hidden;
+            }
+            .latest-post-banner-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: <?php echo esc_attr($atts['overlay_color']); ?>;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+                align-items: center;
+                padding: 20px;
+                box-sizing: border-box;
+            }
+            .latest-post-banner-content {
+                max-width: 600px;
+                width: 100%;
+                text-align: center;
+            }
+            @media (max-width: 768px) {
+                .latest-post-banner-content {
+                    max-width: 100%;
+                    padding: 0 10px;
+                }
+            }
+            .latest-post-banner-title {
+                font-family: Merriweather, serif !important;
+                font-weight: 700;
+                font-size: 36px;
+                line-height: 1.2;
+                color: <?php echo esc_attr($atts['text_color']); ?>;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+                margin: 0 0 10px 0;
+                display: block;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .latest-post-banner-description {
+                font-family: Merriweather, serif !important;
+                font-size: 18px;
+                line-height: 1.5;
+                color: <?php echo esc_attr($atts['text_color']); ?>;
+                text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+                margin: 0;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+            @media (max-width: 768px) {
+                .latest-post-banner-title { font-size: 28px; }
+                .latest-post-banner-description { font-size: 16px; }
+            }
+        </style>
+        <div class="latest-post-banner">
+            <div class="latest-post-banner-overlay">
+                <div class="latest-post-banner-content">
+                    <a href="<?php echo esc_url(get_permalink()); ?>" rel="bookmark" title="<?php echo esc_attr(get_the_title()); ?>">
+                        <h2 class="latest-post-banner-title"><?php echo esc_html(get_the_title()); ?></h2>
+                    </a>
+                    <?php if (has_excerpt() || get_the_content()) : ?>
+                        <div class="latest-post-banner-description">
+                            <?php echo esc_html(wp_trim_words(get_the_excerpt() ? get_the_excerpt() : get_the_content(), 30)); ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php
+    wp_reset_postdata();
+    return ob_get_clean();
+});
+
+// 3️⃣ Register all TagDiv Composer custom elements
+add_action('tdc_init', function() {
+    error_log('TagDiv Composer: tdc_init hook fired');
+    
+    if (!function_exists('tdc_add_custom_element')) {
+        error_log('TagDiv Composer: tdc_add_custom_element function not available');
+        return;
+    }
+    
+    error_log('TagDiv Composer: Starting to register custom elements');
+
+    // 1. Spice Region Posts (filtered by terms)
     tdc_add_custom_element(array(
-        'name' => 'Spice Region Card',       // Name in Composer
-        'shortcode' => 'td_spice_region',    // Internal shortcode
-        'icon' => 'dashicons-location',      // Composer icon
+        'name' => 'Spice Region Posts',
+        'shortcode' => 'td_spice_region_posts',
+        'icon' => 'dashicons-location',
+        'params' => array(
+            array(
+                'name' => 'terms',
+                'type' => 'textfield',
+                'label' => 'Spice Region Terms',
+                'description' => 'Comma-separated term slugs (e.g., lemongrass,cumin)',
+                'default' => ''
+            ),
+            array(
+                'name' => 'posts_per_page',
+                'type' => 'textfield',
+                'label' => 'Posts Per Page',
+                'default' => '3'
+            ),
+            array(
+                'name' => 'columns',
+                'type' => 'dropdown',
+                'label' => 'Columns',
+                'options' => array(
+                    '1 Column' => '1',
+                    '2 Columns' => '2',
+                    '3 Columns' => '3',
+                    '4 Columns' => '4'
+                ),
+                'default' => '1'
+            ),
+            array(
+                'name' => 'ratio',
+                'type' => 'dropdown',
+                'label' => 'Image Aspect Ratio',
+                'options' => array(
+                    '16:9 (1600x872)' => '1600x872',
+                    '4:3' => '4x3',
+                    '1:1 (Square)' => '1x1',
+                    '21:9 (Wide)' => '21x9'
+                ),
+                'default' => '1600x872'
+            ),
+            array(
+                'name' => 'no_watermark',
+                'type' => 'checkbox',
+                'label' => 'No Watermark',
+                'description' => 'Use original images from backup',
+                'default' => ''
+            )
+        ),
+    ));
+
+    // 2. Current Spice Region Posts (auto-detect)
+    tdc_add_custom_element(array(
+        'name' => 'Current Spice Region Posts',
+        'shortcode' => 'td_spice_region_current',
+        'icon' => 'dashicons-location-alt',
+        'params' => array(
+            array(
+                'name' => 'posts_per_page',
+                'type' => 'textfield',
+                'label' => 'Posts Per Page',
+                'default' => '3'
+            ),
+            array(
+                'name' => 'columns',
+                'type' => 'dropdown',
+                'label' => 'Columns',
+                'options' => array(
+                    '1 Column' => '1',
+                    '2 Columns' => '2',
+                    '3 Columns' => '3',
+                    '4 Columns' => '4'
+                ),
+                'default' => '1'
+            ),
+            array(
+                'name' => 'ratio',
+                'type' => 'dropdown',
+                'label' => 'Image Aspect Ratio',
+                'options' => array(
+                    '16:9 (1600x872)' => '1600x872',
+                    '4:3' => '4x3',
+                    '1:1 (Square)' => '1x1',
+                    '21:9 (Wide)' => '21x9'
+                ),
+                'default' => '1600x872'
+            ),
+            array(
+                'name' => 'no_watermark',
+                'type' => 'checkbox',
+                'label' => 'No Watermark',
+                'description' => 'Use original images from backup',
+                'default' => ''
+            )
+        ),
+    ));
+
+    // 3. Latest Post Banner
+    tdc_add_custom_element(array(
+        'name' => 'Latest Post Banner',
+        'shortcode' => 'td_latest_post_banner',
+        'icon' => 'dashicons-format-image',
+        'params' => array(
+            array(
+                'name' => 'ratio',
+                'type' => 'dropdown',
+                'label' => 'Banner Aspect Ratio',
+                'options' => array(
+                    '16:9 (1600x872)' => '1600x872',
+                    '4:3' => '4x3',
+                    '1:1 (Square)' => '1x1',
+                    '21:9 (Wide)' => '21x9'
+                ),
+                'default' => '1600x872'
+            ),
+            array(
+                'name' => 'text_color',
+                'type' => 'colorpicker',
+                'label' => 'Text Color',
+                'default' => '#ffffff'
+            ),
+            array(
+                'name' => 'overlay_color',
+                'type' => 'textfield',
+                'label' => 'Overlay Color',
+                'description' => 'CSS rgba value (e.g., rgba(0,0,0,0.4))',
+                'default' => 'rgba(0,0,0,0.4)'
+            ),
+            array(
+                'name' => 'no_watermark',
+                'type' => 'checkbox',
+                'label' => 'No Watermark',
+                'description' => 'Use original images from backup',
+                'default' => ''
+            )
+        ),
+    ));
+
+    // 4. Spice Region Single Card (original)
+    tdc_add_custom_element(array(
+        'name' => 'Spice Region Card',
+        'shortcode' => 'td_spice_region_card',
+        'icon' => 'dashicons-location',
         'params' => array(
             array(
                 'name' => 'term',
@@ -136,6 +672,276 @@ add_action('td_composer_loaded', function() {
         ),
     ));
 
+});
+
+// Multiple registration attempts
+add_action('wp_loaded', function() {
+    error_log('TagDiv Composer: wp_loaded hook fired');
+    if (function_exists('tdc_add_custom_element')) {
+        error_log('TagDiv Composer: tdc_add_custom_element available in wp_loaded');
+        // Re-register if tdc_init didn't work
+        tdc_add_custom_element(array(
+            'name' => 'Spice Region Posts (Alt)',
+            'shortcode' => 'td_spice_region_posts_alt',
+            'icon' => 'dashicons-location',
+            'params' => array(
+                array(
+                    'name' => 'terms',
+                    'type' => 'textfield',
+                    'label' => 'Spice Region Terms',
+                    'description' => 'Comma-separated term slugs (e.g., lemongrass,cumin)',
+                    'default' => ''
+                ),
+            ),
+        ));
+    }
+});
+
+// Try admin_init as well
+add_action('admin_init', function() {
+    error_log('TagDiv Composer: admin_init hook fired');
+    if (function_exists('tdc_add_custom_element')) {
+        error_log('TagDiv Composer: tdc_add_custom_element available in admin_init');
+        tdc_add_custom_element(array(
+            'name' => 'Spice Region Posts (Admin)',
+            'shortcode' => 'td_spice_region_posts_admin',
+            'icon' => 'dashicons-location',
+            'params' => array(
+                array(
+                    'name' => 'terms',
+                    'type' => 'textfield',
+                    'label' => 'Spice Region Terms',
+                    'description' => 'Comma-separated term slugs (e.g., lemongrass,cumin)',
+                    'default' => ''
+                ),
+            ),
+        ));
+    }
+});
+
+// Try init hook
+add_action('init', function() {
+    error_log('TagDiv Composer: init hook fired');
+    if (function_exists('tdc_add_custom_element')) {
+        error_log('TagDiv Composer: tdc_add_custom_element available in init');
+        tdc_add_custom_element(array(
+            'name' => 'Spice Region Posts (Init)',
+            'shortcode' => 'td_spice_region_posts_init',
+            'icon' => 'dashicons-location',
+            'params' => array(
+                array(
+                    'name' => 'terms',
+                    'type' => 'textfield',
+                    'label' => 'Spice Region Terms',
+                    'description' => 'Comma-separated term slugs (e.g., lemongrass,cumin)',
+                    'default' => ''
+                ),
+            ),
+        ));
+    } else {
+        error_log('TagDiv Composer: tdc_add_custom_element NOT available in init');
+    }
+});
+
+// Try using WordPress admin_init hook
+add_action('admin_init', function() {
+    error_log('TagDiv Composer: admin_init hook fired');
+    if (function_exists('tdc_add_custom_element')) {
+        error_log('TagDiv Composer: tdc_add_custom_element available in admin_init');
+        tdc_add_custom_element(array(
+            'name' => 'Spice Region Posts (Admin)',
+            'shortcode' => 'td_spice_region_posts_admin',
+            'icon' => 'dashicons-location',
+            'params' => array(
+                array(
+                    'name' => 'terms',
+                    'type' => 'textfield',
+                    'label' => 'Spice Region Terms',
+                    'description' => 'Comma-separated term slugs (e.g., lemongrass,cumin)',
+                    'default' => ''
+                ),
+            ),
+        ));
+    } else {
+        error_log('TagDiv Composer: tdc_add_custom_element NOT available in admin_init');
+    }
+});
+
+// Try using WordPress admin_menu hook
+add_action('admin_menu', function() {
+    error_log('TagDiv Composer: admin_menu hook fired');
+    if (function_exists('tdc_add_custom_element')) {
+        error_log('TagDiv Composer: tdc_add_custom_element available in admin_menu');
+        tdc_add_custom_element(array(
+            'name' => 'Spice Region Posts (Menu)',
+            'shortcode' => 'td_spice_region_posts_menu',
+            'icon' => 'dashicons-location',
+            'params' => array(
+                array(
+                    'name' => 'terms',
+                    'type' => 'textfield',
+                    'label' => 'Spice Region Terms',
+                    'description' => 'Comma-separated term slugs (e.g., lemongrass,cumin)',
+                    'default' => ''
+                ),
+            ),
+        ));
+    } else {
+        error_log('TagDiv Composer: tdc_add_custom_element NOT available in admin_menu');
+    }
+});
+
+// Try TagDiv's native method
+add_action('wp_loaded', function() {
+    if (class_exists('tdc_util')) {
+        error_log('TagDiv Composer: tdc_util class available');
+        // Try using TagDiv's internal method
+        if (method_exists('tdc_util', 'add_custom_element')) {
+            error_log('TagDiv Composer: tdc_util::add_custom_element method available');
+        }
+    }
+    
+    // Try using TagDiv's internal registration
+    if (class_exists('tdc_util')) {
+        error_log('TagDiv Composer: Trying tdc_util registration');
+        try {
+            // Try to call the method directly
+            if (method_exists('tdc_util', 'add_custom_element')) {
+                tdc_util::add_custom_element(array(
+                    'name' => 'Spice Region Posts (Util)',
+                    'shortcode' => 'td_spice_region_posts_util',
+                    'icon' => 'dashicons-location',
+                    'params' => array(
+                        array(
+                            'name' => 'terms',
+                            'type' => 'textfield',
+                            'label' => 'Spice Region Terms',
+                            'description' => 'Comma-separated term slugs (e.g., lemongrass,cumin)',
+                            'default' => ''
+                        ),
+                    ),
+                ));
+                error_log('TagDiv Composer: tdc_util registration successful');
+            }
+        } catch (Exception $e) {
+            error_log('TagDiv Composer: tdc_util registration failed - ' . $e->getMessage());
+        }
+    }
+    
+    // Try direct registration without function check
+    if (function_exists('tdc_add_custom_element')) {
+        error_log('TagDiv Composer: Direct registration attempt');
+        try {
+            tdc_add_custom_element(array(
+                'name' => 'Spice Region Posts (Direct)',
+                'shortcode' => 'td_spice_region_posts_direct',
+                'icon' => 'dashicons-location',
+                'params' => array(
+                    array(
+                        'name' => 'terms',
+                        'type' => 'textfield',
+                        'label' => 'Spice Region Terms',
+                        'description' => 'Comma-separated term slugs (e.g., lemongrass,cumin)',
+                        'default' => ''
+                    ),
+                ),
+            ));
+            error_log('TagDiv Composer: Direct registration successful');
+        } catch (Exception $e) {
+            error_log('TagDiv Composer: Direct registration failed - ' . $e->getMessage());
+        }
+    }
+});
+
+// TagDiv Composer shortcode handlers
+add_shortcode('td_spice_region_posts', function($atts) {
+    $atts = shortcode_atts(array(
+        'terms' => '',
+        'posts_per_page' => 3,
+        'columns' => 1,
+        'ratio' => '1600x872',
+        'no_watermark' => false,
+    ), $atts, 'td_spice_region_posts');
+    
+    return do_shortcode('[spice_region_posts terms="' . esc_attr($atts['terms']) . '" posts_per_page="' . esc_attr($atts['posts_per_page']) . '" columns="' . esc_attr($atts['columns']) . '" ratio="' . esc_attr($atts['ratio']) . '" no_watermark="' . ($atts['no_watermark'] ? '1' : '0') . '"]');
+});
+
+add_shortcode('td_spice_region_current', function($atts) {
+    $atts = shortcode_atts(array(
+        'posts_per_page' => 3,
+        'columns' => 1,
+        'ratio' => '1600x872',
+        'no_watermark' => false,
+    ), $atts, 'td_spice_region_current');
+    
+    return do_shortcode('[spice_region_current_posts posts_per_page="' . esc_attr($atts['posts_per_page']) . '" columns="' . esc_attr($atts['columns']) . '" ratio="' . esc_attr($atts['ratio']) . '" no_watermark="' . ($atts['no_watermark'] ? '1' : '0') . '"]');
+});
+
+add_shortcode('td_latest_post_banner', function($atts) {
+    $atts = shortcode_atts(array(
+        'ratio' => '1600x872',
+        'text_color' => '#ffffff',
+        'overlay_color' => 'rgba(0,0,0,0.4)',
+        'no_watermark' => false,
+    ), $atts, 'td_latest_post_banner');
+    
+    return do_shortcode('[latest_post_banner ratio="' . esc_attr($atts['ratio']) . '" text_color="' . esc_attr($atts['text_color']) . '" overlay_color="' . esc_attr($atts['overlay_color']) . '" no_watermark="' . ($atts['no_watermark'] ? '1' : '0') . '"]');
+});
+
+add_shortcode('td_spice_region_card', function($atts) {
+    $atts = shortcode_atts(array(
+        'term' => '',
+    ), $atts, 'td_spice_region_card');
+    
+    return do_shortcode('[spice_region_single term="' . esc_attr($atts['term']) . '"]');
+});
+
+add_shortcode('td_spice_region_posts_alt', function($atts) {
+    $atts = shortcode_atts(array(
+        'terms' => '',
+    ), $atts, 'td_spice_region_posts_alt');
+    
+    return do_shortcode('[spice_region_posts terms="' . esc_attr($atts['terms']) . '"]');
+});
+
+add_shortcode('td_spice_region_posts_admin', function($atts) {
+    $atts = shortcode_atts(array(
+        'terms' => '',
+    ), $atts, 'td_spice_region_posts_admin');
+    
+    return do_shortcode('[spice_region_posts terms="' . esc_attr($atts['terms']) . '"]');
+});
+
+add_shortcode('td_spice_region_posts_init', function($atts) {
+    $atts = shortcode_atts(array(
+        'terms' => '',
+    ), $atts, 'td_spice_region_posts_init');
+    
+    return do_shortcode('[spice_region_posts terms="' . esc_attr($atts['terms']) . '"]');
+});
+
+add_shortcode('td_spice_region_posts_direct', function($atts) {
+    $atts = shortcode_atts(array(
+        'terms' => '',
+    ), $atts, 'td_spice_region_posts_direct');
+    
+    return do_shortcode('[spice_region_posts terms="' . esc_attr($atts['terms']) . '"]');
+});
+
+add_shortcode('td_spice_region_posts_util', function($atts) {
+    $atts = shortcode_atts(array(
+        'terms' => '',
+    ), $atts, 'td_spice_region_posts_util');
+    
+    return do_shortcode('[spice_region_posts terms="' . esc_attr($atts['terms']) . '"]');
+});
+
+add_shortcode('td_spice_region_posts_menu', function($atts) {
+    $atts = shortcode_atts(array(
+        'terms' => '',
+    ), $atts, 'td_spice_region_posts_menu');
+    
+    return do_shortcode('[spice_region_posts terms="' . esc_attr($atts['terms']) . '"]');
 });
 
 //==============================
