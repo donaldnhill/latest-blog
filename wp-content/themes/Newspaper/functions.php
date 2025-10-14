@@ -470,12 +470,46 @@ add_shortcode('latest_post_banner', function($atts) {
                 -webkit-box-orient: vertical;
                 overflow: hidden;
             }
+            .latest-post-banner-support-btn {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                background: #a40d02;
+                color: white;
+                padding: 12px 20px;
+                border: none;
+                border-radius: 6px;
+                font-family: 'Fira Sans', sans-serif;
+                font-weight: 600;
+                font-size: 16px;
+                text-decoration: none;
+                display: inline-block;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                z-index: 10;
+            }
+            
+            .latest-post-banner-support-btn:hover {
+                background: #8a0a02;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                color: white;
+                text-decoration: none;
+            }
+            
             @media (max-width: 768px) {
                 .latest-post-banner-title { font-size: 28px; }
                 .latest-post-banner-description { font-size: 16px; }
+                .latest-post-banner-support-btn {
+                    top: 15px;
+                    right: 15px;
+                    padding: 10px 16px;
+                    font-size: 13px;
+                }
             }
         </style>
         <div class="latest-post-banner">
+            <a href="https://nowpayments.io/donation/spicyauntie" target="_blank" class="latest-post-banner-support-btn">Support</a>
             <div class="latest-post-banner-overlay">
                 <div class="latest-post-banner-content">
                     <a href="<?php echo esc_url(get_permalink()); ?>" rel="bookmark" title="<?php echo esc_attr(get_the_title()); ?>">

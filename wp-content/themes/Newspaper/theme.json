@@ -60,37 +60,5 @@
         }
       ]
     }
-  },
-  "styles": {
-    "elements": {
-      "h1": {
-        "typography": {
-          "fontFamily": "var(--wp--preset--font-family--fira-sans)"
-        }
-      },
-      "h2": {
-        "typography": {
-          "fontFamily": "var(--wp--preset--font-family--fira-sans)"
-        }
-      },
-      "h3": {
-        "typography": {
-          "fontFamily": "var(--wp--preset--font-family--fira-sans)"
-        }
-      },
-      "p": {
-        "typography": {
-          "fontFamily": "var(--wp--preset--font-family--merriweather)"
-        }
-      }
-    },
-    "spacing": {
-      "padding": {
-        "top": "1rem",
-        "right": "1rem",
-        "bottom": "1rem",
-        "left": "1rem"
-      }
-    }
   }
 }
