@@ -1,0 +1,96 @@
+{
+  "version": 2,
+  "settings": {
+    "typography": {
+      "fontFamilies": [
+        {
+          "fontFamily": "adlerypro, sans-serif",
+          "name": "Adlery Pro",
+          "slug": "adlery-pro"
+        },
+        {
+          "fontFamily": "Fira Sans, sans-serif",
+          "name": "Fira Sans",
+          "slug": "fira-sans"
+        },
+        {
+          "fontFamily": "Merriweather, serif",
+          "name": "Merriweather", 
+          "slug": "merriweather"
+        },
+        {
+          "fontFamily": "Open Sans, sans-serif",
+          "name": "Open Sans",
+          "slug": "open-sans"
+        },
+        {
+          "fontFamily": "Roboto, sans-serif",
+          "name": "Roboto",
+          "slug": "roboto"
+        },
+        {
+          "fontFamily": "Lato, sans-serif",
+          "name": "Lato",
+          "slug": "lato"
+        },
+        {
+          "fontFamily": "Montserrat, sans-serif",
+          "name": "Montserrat",
+          "slug": "montserrat"
+        },
+        {
+          "fontFamily": "Poppins, sans-serif",
+          "name": "Poppins",
+          "slug": "poppins"
+        },
+        {
+          "fontFamily": "Playfair Display, serif",
+          "name": "Playfair Display",
+          "slug": "playfair-display"
+        },
+        {
+          "fontFamily": "Lora, serif",
+          "name": "Lora",
+          "slug": "lora"
+        },
+        {
+          "fontFamily": "Dancing Script, cursive",
+          "name": "Dancing Script",
+          "slug": "dancing-script"
+        }
+      ]
+    }
+  },
+  "styles": {
+    "elements": {
+      "h1": {
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--fira-sans)"
+        }
+      },
+      "h2": {
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--fira-sans)"
+        }
+      },
+      "h3": {
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--fira-sans)"
+        }
+      },
+      "p": {
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--merriweather)"
+        }
+      }
+    },
+    "spacing": {
+      "padding": {
+        "top": "1rem",
+        "right": "1rem",
+        "bottom": "1rem",
+        "left": "1rem"
+      }
+    }
+  }
+}
