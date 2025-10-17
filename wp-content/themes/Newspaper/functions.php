@@ -125,6 +125,7 @@ add_shortcode('spice_region_posts', function($atts) {
         'ratio' => '1600x872',    // widthxheight used to set CSS aspect ratio
         'show_excerpt' => true,
         'no_watermark' => false,
+        'show_taxonomy_title' => true,
     ), $atts, 'spice_region_posts');
 
     $termSlugs = array_filter(array_map('trim', explode(',', strtolower($atts['terms']))));
@@ -171,13 +172,12 @@ add_shortcode('spice_region_posts', function($atts) {
         $subtitle = function_exists('get_field') ? get_field('subtitle', 'spice_region_' . $first_term->term_id) : '';
         $icon = function_exists('get_field') ? get_field('icon', 'spice_region_' . $first_term->term_id) : '';
         $icon_url = is_array($icon) && !empty($icon['url']) ? $icon['url'] : '';
-        $header_html = '<div class="spice-region-header" style="display:flex;align-items:center;justify-content:center;gap:14px;margin:0 10px 10px;text-align:center;">'
-            . '<div style="display:flex;flex-direction:column;justify-content:center;align-items:center;">'
-                . '<div style="color:#a40d02;font-weight:700;font-size:28px;line-height:1;font-family:Fira Sans,sans-serif !important;">' . esc_html($first_term->name) . '</div>'
-                . ($subtitle ? '<div style="margin-top:6px;color:#a40d02;font-weight:600;text-transform:capitalize;line-height:1.2;font-family:Fira Sans,sans-serif !important;">' . esc_html($subtitle) . '</div>' : '')
-            . '</div>'
-            . ($icon_url ? '<img src="' . esc_url($icon_url) . '" alt="' . esc_attr($first_term->name) . '" style="height:50px;width:auto;object-fit:contain;">' : '')
-          . '</div>';
+        $header_html = '';
+        if (!empty($atts['show_taxonomy_title'])) {
+            $header_html = '<div class="spice-region-header" style="display:flex;align-items:center;justify-content:center;margin:0 10px 20px;text-align:center;">'
+                . '<div style="color:#a40d02;font-weight:700;font-size:36px;line-height:1;font-family:Fira Sans,sans-serif !important;">' . esc_html($first_term->name) . '</div>'
+              . '</div>';
+        }
     }
 
     ob_start();
@@ -187,9 +187,35 @@ add_shortcode('spice_region_posts', function($atts) {
                 .spice-region-card{padding:10px;box-sizing:border-box}
                 .spice-region-card-inner{background:#fff;border:0}
                 .spice-region-thumb img{width:100%;height:auto;display:block}
-                .spice-region-title{font-weight:600;margin:8px 0 6px 0;padding:0;text-align:left;font-family:Merriweather,serif !important}
-                .spice-region-title a{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none}
-                .spice-region-excerpt{margin:0 0 12px 0;padding:0;color:#555;font-size:14px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-align:left;font-family:Merriweather,serif !important;line-height:1.4}
+                .spice-region-posts .entry-title {
+                    margin: 0 6px 0 0;
+                    font-family: Merriweather !important;
+                    font-size: 16px !important;
+                    line-height: 1.5 !important;
+                    font-weight: 800 !important;
+                    word-wrap: break-word;
+                }
+                .spice-region-posts .entry-title a {
+                    display: block;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    text-decoration: none;
+                }
+                .spice-region-posts .td-excerpt {
+                    display: block;
+                    margin: 4px 0;
+                    font-family: Merriweather !important;
+                    font-size: 14px !important;
+                    line-height: 1.5 !important;
+                    font-weight: 300 !important;
+                    color: #767676;
+                    overflow-wrap: anywhere;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 3;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                }
                 .spice-region-posts .td-post-category{margin:0 0 -15px 0;padding:8px 12px 7px;background-color:#ffffff;color:#000000;font-family:Fira Sans !important;font-size:15px !important;line-height:1 !important;font-weight:600 !important;text-transform:uppercase !important;letter-spacing:1px !important;text-decoration:none !important;display:inline-block !important;position:absolute;left:0px;bottom:3px;z-index:2;}
             </style>';
     echo '<div class="spice-region-grid">';
@@ -229,9 +255,9 @@ add_shortcode('spice_region_posts', function($atts) {
                         . '</a>'
                     . '</div>';
                 echo '</div>';
-                echo '<h3 class="spice-region-title"><a href="' . esc_url(get_permalink()) . '">' . esc_html(get_the_title()) . '</a></h3>';
+                echo '<h3 class="entry-title td-module-title"><a href="' . esc_url(get_permalink()) . '">' . esc_html(get_the_title()) . '</a></h3>';
                 if (!empty($atts['show_excerpt'])) {
-                    echo '<p class="spice-region-excerpt">' . esc_html(wp_trim_words(get_the_excerpt(), 20)) . '</p>';
+                    echo '<div class="td-excerpt">' . esc_html(wp_trim_words(get_the_excerpt(), 28)) . '</div>';
                 }
             echo '</div>';
         echo '</div>';
@@ -303,9 +329,35 @@ add_shortcode('spice_region_current_posts', function($atts) {
                 .spice-region-card{padding:10px;box-sizing:border-box}
                 .spice-region-card-inner{background:#fff;border:0}
                 .spice-region-thumb img{width:100%;height:auto;display:block}
-                .spice-region-title{font-weight:600;margin:8px 0 6px 0;padding:0;text-align:left;font-family:Merriweather,serif !important}
-                .spice-region-title a{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none}
-                .spice-region-excerpt{margin:0 0 12px 0;padding:0;color:#555;font-size:14px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-align:left;font-family:Merriweather,serif !important;line-height:1.4}
+                .spice-region-posts .entry-title {
+                    margin: 0 6px 0 0;
+                    font-family: Merriweather !important;
+                    font-size: 16px !important;
+                    line-height: 1.5 !important;
+                    font-weight: 800 !important;
+                    word-wrap: break-word;
+                }
+                .spice-region-posts .entry-title a {
+                    display: block;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    text-decoration: none;
+                }
+                .spice-region-posts .td-excerpt {
+                    display: block;
+                    margin: 4px 0;
+                    font-family: Merriweather !important;
+                    font-size: 14px !important;
+                    line-height: 1.5 !important;
+                    font-weight: 300 !important;
+                    color: #767676;
+                    overflow-wrap: anywhere;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 3;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                }
                 .spice-region-posts .td-post-category{margin:0 0 -15px 0;padding:8px 12px 7px;background-color:#ffffff;color:#000000;font-family:Fira Sans !important;font-size:15px !important;line-height:1 !important;font-weight:600 !important;text-transform:uppercase !important;letter-spacing:1px !important;text-decoration:none !important;display:inline-block !important;position:absolute;left:0px;bottom:3px;z-index:2;}
             </style>';
     echo '<div class="spice-region-grid">';
@@ -329,9 +381,9 @@ add_shortcode('spice_region_current_posts', function($atts) {
                         . '</a>'
                     . '</div>';
                 echo '</div>';
-                echo '<h3 class="spice-region-title"><a href="' . esc_url(get_permalink()) . '">' . esc_html(get_the_title()) . '</a></h3>';
+                echo '<h3 class="entry-title td-module-title"><a href="' . esc_url(get_permalink()) . '">' . esc_html(get_the_title()) . '</a></h3>';
                 if (!empty($atts['show_excerpt'])) {
-                    echo '<p class="spice-region-excerpt">' . esc_html(wp_trim_words(get_the_excerpt(), 20)) . '</p>';
+                    echo '<div class="td-excerpt">' . esc_html(wp_trim_words(get_the_excerpt(), 28)) . '</div>';
                 }
             echo '</div>';
         echo '</div>';
@@ -344,12 +396,13 @@ add_shortcode('spice_region_current_posts', function($atts) {
 
 // Shortcode: [latest_post_banner] - Homepage cover banner with latest post
 add_shortcode('latest_post_banner', function($atts) {
+    error_log('LATEST POST BANNER SHORTCODE CALLED');
     $atts = shortcode_atts(array(
         'posts_per_page' => 1,
         'post_type' => 'post',
         'image_size' => 'full',
         'ratio' => '1600x872',
-        'no_watermark' => false,
+        'no_watermark' => true,
         'text_color' => '#ffffff',
         'overlay_color' => 'rgba(0,0,0,0.4)',
     ), $atts, 'latest_post_banner');
@@ -426,7 +479,7 @@ add_shortcode('latest_post_banner', function($atts) {
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: <?php echo esc_attr($atts['overlay_color']); ?>;
+                background: transparent;
                 display: flex;
                 flex-direction: column;
                 justify-content: flex-end;
@@ -470,6 +523,42 @@ add_shortcode('latest_post_banner', function($atts) {
                 -webkit-box-orient: vertical;
                 overflow: hidden;
             }
+            .latest-post-banner .tdb-category {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: center;
+                margin-bottom: 15px;
+            }
+            .latest-post-banner .tdb-entry-category {
+                padding: 5px 6px 3px;
+                font-family: Fira Sans !important;
+                font-size: 11px !important;
+                line-height: 1 !important;
+                font-weight: 400 !important;
+                text-transform: uppercase !important;
+                letter-spacing: 1px !important;
+                color: <?php echo esc_attr($atts['text_color']); ?> !important;
+                text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+                text-decoration: none;
+                background: rgba(255, 255, 255, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 4px;
+                display: inline-block;
+                margin: 0 5px 5px 0;
+                white-space: nowrap;
+                position: relative;
+                vertical-align: middle;
+            }
+            .latest-post-banner .entry-date {
+                font-family: Fira Sans !important;
+                font-weight: 400;
+                font-size: 12px !important;
+                color: <?php echo esc_attr($atts['text_color']); ?> !important;
+                text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+                margin-top: 15px;
+                text-align: center;
+            }
             .latest-post-banner-support-btn {
                 position: absolute;
                 top: 20px;
@@ -512,14 +601,75 @@ add_shortcode('latest_post_banner', function($atts) {
             <a href="https://nowpayments.io/donation/spicyauntie" target="_blank" class="latest-post-banner-support-btn">Support</a>
             <div class="latest-post-banner-overlay">
                 <div class="latest-post-banner-content">
+                    <?php
+                    // Get post categories
+                    $categories = get_the_category();
+                    if (!empty($categories)) : ?>
+                        <div class="tdb-category td-fix-index">
+                            <?php foreach ($categories as $category) : ?>
+                                <a class="tdb-entry-category" href="<?php echo esc_url(get_category_link($category->term_id)); ?>">
+                                    <span class="tdb-cat-bg"></span><?php echo esc_html($category->name); ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                    
                     <a href="<?php echo esc_url(get_permalink()); ?>" rel="bookmark" title="<?php echo esc_attr(get_the_title()); ?>">
                         <h2 class="latest-post-banner-title"><?php echo esc_html(get_the_title()); ?></h2>
                     </a>
-                    <?php if (has_excerpt() || get_the_content()) : ?>
+                    <?php 
+                    // Get subtitle from TagDiv's theme settings (serialized data)
+                    $post_id = get_the_ID();
+                    $subtitle = '';
+                    
+                    // Get the theme settings which contains the subtitle
+                    $theme_settings = get_post_meta($post_id, 'td_post_theme_settings', true);
+                    error_log('Banner Debug - Theme settings raw: ' . print_r($theme_settings, true));
+                    
+                    if (!empty($theme_settings) && is_string($theme_settings)) {
+                        $unserialized = maybe_unserialize($theme_settings);
+                        error_log('Banner Debug - Unserialized theme settings: ' . print_r($unserialized, true));
+                        
+                        if (is_array($unserialized) && isset($unserialized['td_subtitle'])) {
+                            $subtitle = $unserialized['td_subtitle'];
+                            error_log('Banner Debug - Found subtitle in theme settings: ' . $subtitle);
+                        } else {
+                            error_log('Banner Debug - No td_subtitle found in theme settings');
+                        }
+                    } else {
+                        error_log('Banner Debug - Theme settings empty or not string');
+                    }
+                    
+                    // Debug: Log the subtitle value
+                    error_log('Banner Debug - Post ID: ' . $post_id);
+                    error_log('Banner Debug - td_subtitle value: ' . ($subtitle ? $subtitle : 'EMPTY'));
+                    error_log('Banner Debug - Has excerpt: ' . (has_excerpt() ? 'YES' : 'NO'));
+                    
+                    // Get description text - subtitle first, then excerpt, then content
+                    $description_text = '';
+                    
+                    if (!empty($subtitle)) {
+                        $description_text = $subtitle;
+                        error_log('Banner Debug - Using subtitle: ' . $subtitle);
+                    } elseif (has_excerpt()) {
+                        $description_text = get_the_excerpt();
+                        error_log('Banner Debug - Using excerpt: ' . $description_text);
+                    } elseif (get_the_content()) {
+                        $description_text = get_the_content();
+                        error_log('Banner Debug - Using content: ' . $description_text);
+                    }
+                    
+                    error_log('Banner Debug - Final description: ' . $description_text);
+                    
+                    if ($description_text) : ?>
                         <div class="latest-post-banner-description">
-                            <?php echo esc_html(wp_trim_words(get_the_excerpt() ? get_the_excerpt() : get_the_content(), 30)); ?>
+                            <?php echo esc_html(wp_trim_words($description_text, 30)); ?>
                         </div>
                     <?php endif; ?>
+                    
+                    <div class="entry-date updated td-module-date">
+                        <?php echo esc_html(get_the_date('F j, Y')); ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -527,6 +677,19 @@ add_shortcode('latest_post_banner', function($atts) {
     <?php
     wp_reset_postdata();
     return ob_get_clean();
+});
+
+// Global CSS for td-post-category styling
+add_action('wp_head', function() {
+    echo '<style>
+        .td-post-category {
+            font-weight: normal !important;
+            bottom: 0px !important;
+            left: 0px !important;
+            font-size: 15px !important;
+            font-family: Fira Sans !important;
+        }
+    </style>';
 });
 
 // 3️⃣ Register all TagDiv Composer custom elements
@@ -895,9 +1058,10 @@ add_shortcode('td_spice_region_posts', function($atts) {
         'columns' => 1,
         'ratio' => '1600x872',
         'no_watermark' => false,
+        'show_taxonomy_title' => true,
     ), $atts, 'td_spice_region_posts');
     
-    return do_shortcode('[spice_region_posts terms="' . esc_attr($atts['terms']) . '" posts_per_page="' . esc_attr($atts['posts_per_page']) . '" columns="' . esc_attr($atts['columns']) . '" ratio="' . esc_attr($atts['ratio']) . '" no_watermark="' . ($atts['no_watermark'] ? '1' : '0') . '"]');
+    return do_shortcode('[spice_region_posts terms="' . esc_attr($atts['terms']) . '" posts_per_page="' . esc_attr($atts['posts_per_page']) . '" columns="' . esc_attr($atts['columns']) . '" ratio="' . esc_attr($atts['ratio']) . '" no_watermark="' . ($atts['no_watermark'] ? '1' : '0') . '" show_taxonomy_title="' . ($atts['show_taxonomy_title'] ? '1' : '0') . '"]');
 });
 
 add_shortcode('td_spice_region_current', function($atts) {
@@ -916,7 +1080,7 @@ add_shortcode('td_latest_post_banner', function($atts) {
         'ratio' => '1600x872',
         'text_color' => '#ffffff',
         'overlay_color' => 'rgba(0,0,0,0.4)',
-        'no_watermark' => false,
+        'no_watermark' => true,
     ), $atts, 'td_latest_post_banner');
     
     return do_shortcode('[latest_post_banner ratio="' . esc_attr($atts['ratio']) . '" text_color="' . esc_attr($atts['text_color']) . '" overlay_color="' . esc_attr($atts['overlay_color']) . '" no_watermark="' . ($atts['no_watermark'] ? '1' : '0') . '"]');
