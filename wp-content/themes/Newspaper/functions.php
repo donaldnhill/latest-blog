@@ -18,6 +18,9 @@ require_once TAGDIV_ROOT_DIR . '/includes/tagdiv-config.php';
  */
 require_once( TAGDIV_ROOT_DIR . '/includes/wp-booster/tagdiv-wp-booster-functions.php');
 
+// Include test shortcode file
+require_once( TAGDIV_ROOT_DIR . '/test-shortcode.php');
+
 
 /**
  * Theme page generator support.
@@ -487,16 +490,47 @@ add_shortcode('latest_post_banner', function($atts) {
                 padding: 20px;
                 box-sizing: border-box;
             }
-            .latest-post-banner-content {
+            /* Individual Container Styles */
+            .latest-post-banner-category-container {
                 max-width: 600px;
                 width: 100%;
                 text-align: center;
+                margin: 0 auto;
             }
+            
+            .latest-post-banner-title-container {
+                width: 100%;
+                text-align: center;
+                margin: 10px 0;
+            }
+            
+            .latest-post-banner-description-container {
+                max-width: 600px;
+                width: 100%;
+                text-align: center;
+                margin: 0 auto;
+            }
+            
+            .latest-post-banner-date-container {
+                max-width: 600px;
+                width: 100%;
+                text-align: center;
+                margin: 0 auto;
+            }
+            
             @media (max-width: 768px) {
-                .latest-post-banner-content {
+                .latest-post-banner-category-container,
+                .latest-post-banner-description-container,
+                .latest-post-banner-date-container {
                     max-width: 100%;
                     padding: 0 10px;
                 }
+            }
+            
+            .latest-post-banner-title-link {
+                display: block;
+                width: 100%;
+                margin: 0;
             }
             .latest-post-banner-title {
                 font-family: Merriweather, serif !important;
@@ -505,7 +539,7 @@ add_shortcode('latest_post_banner', function($atts) {
                 line-height: 1.2;
                 color: <?php echo esc_attr($atts['text_color']); ?>;
                 text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-                margin: 0 0 10px 0;
+                margin: 0;
                 display: block;
                 white-space: nowrap;
                 overflow: hidden;
@@ -562,7 +596,7 @@ add_shortcode('latest_post_banner', function($atts) {
             .latest-post-banner-support-btn {
                 position: absolute;
                 top: 20px;
-                right: 20px;
+                right: 40px;
                 background: #a40d02;
                 color: white;
                 padding: 12px 20px;
@@ -587,11 +621,13 @@ add_shortcode('latest_post_banner', function($atts) {
             }
             
             @media (max-width: 768px) {
-                .latest-post-banner-title { font-size: 28px; }
+                .latest-post-banner-title { 
+                    font-size: 28px; 
+                }
                 .latest-post-banner-description { font-size: 16px; }
                 .latest-post-banner-support-btn {
                     top: 15px;
-                    right: 15px;
+                    right: 35px;
                     padding: 10px 16px;
                     font-size: 13px;
                 }
@@ -600,11 +636,12 @@ add_shortcode('latest_post_banner', function($atts) {
         <div class="latest-post-banner">
             <a href="https://nowpayments.io/donation/spicyauntie" target="_blank" class="latest-post-banner-support-btn">Support</a>
             <div class="latest-post-banner-overlay">
-                <div class="latest-post-banner-content">
-                    <?php
-                    // Get post categories
-                    $categories = get_the_category();
-                    if (!empty($categories)) : ?>
+                <!-- Category Container -->
+                <?php
+                // Get post categories
+                $categories = get_the_category();
+                if (!empty($categories)) : ?>
+                    <div class="latest-post-banner-category-container">
                         <div class="tdb-category td-fix-index">
                             <?php foreach ($categories as $category) : ?>
                                 <a class="tdb-entry-category" href="<?php echo esc_url(get_category_link($category->term_id)); ?>">
@@ -612,11 +649,15 @@ add_shortcode('latest_post_banner', function($atts) {
                                 </a>
                             <?php endforeach; ?>
                         </div>
-                    <?php endif; ?>
-                    
-                    <a href="<?php echo esc_url(get_permalink()); ?>" rel="bookmark" title="<?php echo esc_attr(get_the_title()); ?>">
+                    </div>
+                <?php endif; ?>
+                
+                <!-- Title Container - Full Width -->
+                <div class="latest-post-banner-title-container">
+                    <a href="<?php echo esc_url(get_permalink()); ?>" rel="bookmark" title="<?php echo esc_attr(get_the_title()); ?>" class="latest-post-banner-title-link">
                         <h2 class="latest-post-banner-title"><?php echo esc_html(get_the_title()); ?></h2>
                     </a>
+                </div>
                     <?php 
                     // Get subtitle from TagDiv's theme settings (serialized data)
                     $post_id = get_the_ID();
@@ -660,17 +701,23 @@ add_shortcode('latest_post_banner', function($atts) {
                     }
                     
                     error_log('Banner Debug - Final description: ' . $description_text);
+                    ?>
                     
-                    if ($description_text) : ?>
-                        <div class="latest-post-banner-description">
-                            <?php echo esc_html(wp_trim_words($description_text, 30)); ?>
+                    <!-- Description Container -->
+                    <?php if ($description_text) : ?>
+                        <div class="latest-post-banner-description-container">
+                            <div class="latest-post-banner-description">
+                                <?php echo esc_html(wp_trim_words($description_text, 30)); ?>
+                            </div>
                         </div>
                     <?php endif; ?>
                     
-                    <div class="entry-date updated td-module-date">
-                        <?php echo esc_html(get_the_date('F j, Y')); ?>
+                    <!-- Date Container -->
+                    <div class="latest-post-banner-date-container">
+                        <div class="entry-date updated td-module-date">
+                            <?php echo esc_html(get_the_date('F j, Y')); ?>
+                        </div>
                     </div>
-                </div>
             </div>
         </div>
     </div>
