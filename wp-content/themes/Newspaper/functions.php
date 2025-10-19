@@ -144,12 +144,37 @@ add_shortcode('latest_post_banner', function($atts) {
                 margin: 0 auto;
             }
             
+            .latest-post-banner-commentary-container {
+                max-width: 600px;
+                width: 100%;
+                text-align: center;
+                margin: 0 auto;
+            }
+            
+            .latest-post-banner-commentary {
+                font-family: 'Fira Sans', sans-serif !important;
+                font-size: 16px;
+                line-height: 1.5;
+                color: #ffffff;
+                text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+                margin: 10px 0;
+                font-style: italic;
+                background: rgba(164, 13, 2, 0.1);
+                padding: 10px 15px;
+                border-radius: 4px;
+                border-left: 3px solid #a40d02;
+            }
+            
             @media (max-width: 768px) {
                 .latest-post-banner-category-container,
                 .latest-post-banner-description-container,
+                .latest-post-banner-commentary-container,
                 .latest-post-banner-date-container {
                     max-width: 100%;
                     padding: 0 10px;
+                }
+                .latest-post-banner-commentary {
+                    font-size: 14px;
                 }
             }
             
@@ -358,6 +383,17 @@ add_shortcode('latest_post_banner', function($atts) {
                         </div>
                     <?php endif; ?>
                     
+                    <!-- Commentary Container -->
+                    <?php 
+                    $commentary = get_field('post_commentary', get_the_ID());
+                    if (!empty($commentary)) : ?>
+                        <div class="latest-post-banner-commentary-container">
+                            <div class="latest-post-banner-commentary">
+                                <strong>Commentary:</strong> <?php echo esc_html(wp_trim_words($commentary, 25)); ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                    
                     <!-- Date Container -->
                     <div class="latest-post-banner-date-container">
                         <div class="entry-date updated td-module-date">
@@ -381,6 +417,329 @@ add_action('wp_head', function() {
             left: 0px !important;
             font-size: 15px !important;
             font-family: Fira Sans !important;
+        }
+    </style>';
+});
+
+// Commentary styling to match "Auntie Spices It Out" branding
+add_action('wp_head', function() {
+    echo '<style>
+        /* Commentary Field Styling - Auntie Spices It Out Brand */
+        .post-commentary {
+            margin: 25px 0;
+            padding: 0;
+            background: transparent;
+            border: none;
+            font-family: "Fira Sans", sans-serif;
+            text-align: center;
+        }
+        
+        .post-commentary .commentary-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .post-commentary .commentary-title {
+            color: #a40d02;
+            font-size: 24px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0 0 5px 0;
+            line-height: 1.2;
+        }
+        
+        .post-commentary .commentary-subtitle {
+            color: #a40d02;
+            font-size: 14px;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0;
+            opacity: 0.8;
+        }
+        
+        .post-commentary .commentary-content {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #333;
+            font-style: italic;
+            text-align: left;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Commentary Box Styling */
+        .commentary-box {
+            margin: 25px 0;
+            padding: 0;
+            background: transparent;
+            border: none;
+            font-family: "Fira Sans", sans-serif;
+            text-align: center;
+        }
+        
+        .commentary-box .commentary-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .commentary-box .commentary-title {
+            color: #a40d02;
+            font-size: 24px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0 0 5px 0;
+            line-height: 1.2;
+        }
+        
+        .commentary-box .commentary-subtitle {
+            color: #a40d02;
+            font-size: 14px;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0;
+            opacity: 0.8;
+        }
+        
+        .commentary-box .commentary-icon {
+            margin-right: 10px;
+            font-size: 24px;
+        }
+        
+        .commentary-box .commentary-content {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #333;
+            font-style: italic;
+            text-align: left;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Different Commentary Box Styles */
+        .commentary-box.minimal {
+            border: none;
+            background: transparent;
+            box-shadow: none;
+            padding: 0;
+        }
+        
+        .commentary-box.minimal .commentary-title {
+            font-size: 22px;
+            color: #a40d02;
+        }
+        
+        .commentary-box.card {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+        }
+        
+        .commentary-box.card .commentary-title {
+            color: #a40d02;
+            font-size: 24px;
+        }
+        
+        .commentary-box.highlight {
+            background: transparent;
+            color: #333;
+            border: none;
+            padding: 0;
+        }
+        
+        .commentary-box.highlight .commentary-title {
+            color: #a40d02;
+            font-size: 24px;
+        }
+        
+        .commentary-box.highlight .commentary-content {
+            color: #333;
+            font-style: italic;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .post-commentary, .commentary-box {
+                margin: 20px 0;
+                padding: 15px;
+            }
+            
+            .post-commentary strong, .commentary-box .commentary-title {
+                font-size: 16px;
+            }
+            
+            .post-commentary .commentary-content, .commentary-box .commentary-content {
+                font-size: 15px;
+            }
+        }
+    </style>';
+});
+
+
+/**
+ * Shortcode to display post commentary
+ * Usage: [post_commentary] or [post_commentary post_id="123"]
+ */
+function display_post_commentary_shortcode($atts) {
+    $atts = shortcode_atts(array(
+        'post_id' => get_the_ID(),
+        'show_label' => true,
+        'label_text' => 'Commentary:',
+        'class' => 'post-commentary',
+    ), $atts, 'post_commentary');
+    
+    $post_id = intval($atts['post_id']);
+    $commentary = get_field('post_commentary', $post_id);
+    
+    if (empty($commentary)) {
+        return '';
+    }
+    
+    $label = $atts['show_label'] ? '<strong>' . esc_html($atts['label_text']) . '</strong> ' : '';
+    $class = esc_attr($atts['class']);
+    
+    $output = '<div class="' . $class . '">';
+    $output .= '<div class="commentary-header">';
+    $output .= '<h2 class="commentary-title">Auntie Spices It Out</h2>';
+    $output .= '<p class="commentary-subtitle">Commentary</p>';
+    $output .= '</div>';
+    $output .= '<div class="commentary-content">' . wp_kses_post($commentary) . '</div>';
+    $output .= '</div>';
+    
+    return $output;
+}
+add_shortcode('post_commentary', 'display_post_commentary_shortcode');
+
+/**
+ * Advanced commentary shortcode with more options
+ * Usage: [commentary_box] or [commentary_box style="minimal" show_icon="true"]
+ */
+function display_commentary_box_shortcode($atts) {
+    $atts = shortcode_atts(array(
+        'post_id' => get_the_ID(),
+        'style' => 'default', // default, minimal, card, highlight
+        'show_icon' => false,
+        'show_label' => true,
+        'label_text' => 'Editorial Commentary',
+        'max_words' => 0, // 0 = no limit
+        'class' => 'commentary-box',
+    ), $atts, 'commentary_box');
+    
+    $post_id = intval($atts['post_id']);
+    $commentary = get_field('post_commentary', $post_id);
+    
+    if (empty($commentary)) {
+        return '';
+    }
+    
+    // Apply word limit if specified
+    if ($atts['max_words'] > 0) {
+        $commentary = wp_trim_words($commentary, $atts['max_words']);
+    }
+    
+    $label = $atts['show_label'] ? esc_html($atts['label_text']) : '';
+    $icon = $atts['show_icon'] ? '<span class="commentary-icon">💭</span>' : '';
+    $class = esc_attr($atts['class']) . ' ' . esc_attr($atts['style']);
+    
+    $output = '<div class="' . $class . '">';
+    $output .= '<div class="commentary-header">';
+    $output .= $icon;
+    $output .= '<h2 class="commentary-title">Auntie Spices It Out</h2>';
+    $output .= '<p class="commentary-subtitle">Commentary</p>';
+    $output .= '</div>';
+    $output .= '<div class="commentary-content">' . wp_kses_post($commentary) . '</div>';
+    $output .= '</div>';
+    
+    return $output;
+}
+add_shortcode('commentary_box', 'display_commentary_box_shortcode');
+
+/**
+ * Simple commentary shortcode - just shows commentary content
+ * Usage: [show_commentary] or [show_commentary post_id="123"]
+ */
+function show_commentary_shortcode($atts) {
+    $atts = shortcode_atts(array(
+        'post_id' => get_the_ID(),
+        'show_icon' => true,
+    ), $atts, 'show_commentary');
+    
+    $post_id = intval($atts['post_id']);
+    $commentary = get_field('post_commentary', $post_id);
+    
+    if (empty($commentary)) {
+        return '';
+    }
+    
+    $output = '<div class="post-commentary-simple">';
+    $output .= '<div class="commentary-header">';
+    $output .= '<span class="tdm-title-s-text">Auntie Spices It Out</span>';
+    $output .= '<span class="tdm-title-s-subtitle">Commentary</span>';
+    $output .= '</div>';
+    $output .= '<div class="commentary-content">' . wp_kses_post($commentary) . '</div>';
+    $output .= '</div>';
+    
+    return $output;
+}
+add_shortcode('show_commentary', 'show_commentary_shortcode');
+
+
+
+
+
+
+
+
+/**
+ * Add CSS for commentary shortcode
+ */
+add_action('wp_head', function() {
+    echo '<style>
+        /* Simple Commentary Shortcode Styling */
+        .post-commentary-simple {
+            margin: 20px 0;
+            padding: 0;
+            text-align: center;
+        }
+        
+        .post-commentary-simple .commentary-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .post-commentary-simple .tdm-title-s-text {
+            color: #a40d02;
+            font-size: 36px !important;
+            font-weight: 700 !important;
+            display: block;
+            margin: 0;
+        }
+        
+        .post-commentary-simple .tdm-title-s-subtitle {
+            margin: 1px 0 0;
+            padding-top: 8px;
+            color: #a40d02;
+            line-height: 1 !important;
+            font-weight: 600 !important;
+            text-transform: capitalize !important;
+            display: block;
+        }
+        
+        
+        .post-commentary-simple .commentary-content {
+            font-family: "Fira Sans", sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #333;
+            font-style: normal;
+            text-align: left;
+            margin: 0;
+            max-width: 800px;
+            margin: 0 auto;
         }
     </style>';
 });
