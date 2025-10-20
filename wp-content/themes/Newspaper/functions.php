@@ -47,6 +47,59 @@ function force_show_post_settings_for_editors() {
 }
 add_action('admin_init', 'force_show_post_settings_for_editors');
 
+// Override the TagDiv Composer capability check for post settings
+function override_td_post_settings_capability() {
+    // Force the capability check to return true for editors
+    add_filter('user_has_cap', function($allcaps, $caps, $args) {
+        if (in_array('publish_posts', $caps) && current_user_can('edit_posts')) {
+            $allcaps['publish_posts'] = true;
+        }
+        return $allcaps;
+    }, 10, 3);
+}
+add_action('init', 'override_td_post_settings_capability');
+
+// Force register post settings meta box for editors
+function force_register_post_settings_metabox() {
+    if (current_user_can('edit_posts')) {
+        // Include the WPAlchemy MetaBox class if not already loaded
+        if (!class_exists('WPAlchemy_MetaBox')) {
+            $tdc_path = defined('TDC_PATH') ? TDC_PATH : '';
+            if (empty($tdc_path)) {
+                // Try to find the td-composer plugin path
+                $plugins = get_plugins();
+                foreach ($plugins as $plugin_file => $plugin_data) {
+                    if (strpos($plugin_file, 'td-composer') !== false) {
+                        $tdc_path = WP_PLUGIN_DIR . '/' . dirname($plugin_file) . '/legacy/common/wp_booster/wp-admin/external/wpalchemy/MetaBox.php';
+                        break;
+                    }
+                }
+            } else {
+                $tdc_path .= '/legacy/common/wp_booster/wp-admin/external/wpalchemy/MetaBox.php';
+            }
+            
+            if (file_exists($tdc_path)) {
+                include_once $tdc_path;
+            }
+        }
+        
+        // Register the meta box directly
+        if (class_exists('WPAlchemy_MetaBox')) {
+            $post_settings_mb_setup_options = array(
+                'id' => 'td_post_theme_settings',
+                'title' => 'Post Settings',
+                'types' => array('post'),
+                'priority' => 'high',
+                'template' => defined('TDC_PATH') ? TDC_PATH . '/legacy/common/wp_booster/wp-admin/content-metaboxes/td_set_post_settings.php' : ''
+            );
+            
+            new WPAlchemy_MetaBox($post_settings_mb_setup_options);
+            error_log('Force registered Post Settings meta box for editor');
+        }
+    }
+}
+add_action('admin_init', 'force_register_post_settings_metabox');
+
 // load the deploy mode
 require_once( TAGDIV_ROOT_DIR . '/tagdiv-deploy-mode.php' );
 
