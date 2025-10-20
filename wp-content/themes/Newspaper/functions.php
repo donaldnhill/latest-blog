@@ -144,37 +144,14 @@ add_shortcode('latest_post_banner', function($atts) {
                 margin: 0 auto;
             }
             
-            .latest-post-banner-commentary-container {
-                max-width: 600px;
-                width: 100%;
-                text-align: center;
-                margin: 0 auto;
-            }
             
-            .latest-post-banner-commentary {
-                font-family: 'Fira Sans', sans-serif !important;
-                font-size: 16px;
-                line-height: 1.5;
-                color: #ffffff;
-                text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
-                margin: 10px 0;
-                font-style: italic;
-                background: rgba(164, 13, 2, 0.1);
-                padding: 10px 15px;
-                border-radius: 4px;
-                border-left: 3px solid #a40d02;
-            }
             
             @media (max-width: 768px) {
                 .latest-post-banner-category-container,
                 .latest-post-banner-description-container,
-                .latest-post-banner-commentary-container,
                 .latest-post-banner-date-container {
                     max-width: 100%;
                     padding: 0 10px;
-                }
-                .latest-post-banner-commentary {
-                    font-size: 14px;
                 }
             }
             
@@ -383,16 +360,7 @@ add_shortcode('latest_post_banner', function($atts) {
                         </div>
                     <?php endif; ?>
                     
-                    <!-- Commentary Container -->
-                    <?php 
-                    $commentary = get_field('post_commentary', get_the_ID());
-                    if (!empty($commentary)) : ?>
-                        <div class="latest-post-banner-commentary-container">
-                            <div class="latest-post-banner-commentary">
-                                <strong>Commentary:</strong> <?php echo esc_html(wp_trim_words($commentary, 25)); ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
+                    
                     
                     <!-- Date Container -->
                     <div class="latest-post-banner-date-container">
@@ -692,6 +660,37 @@ add_shortcode('show_commentary', 'show_commentary_shortcode');
 
 
 
+
+/**
+ * Automatically append post commentary after the main content on single posts.
+ * This keeps placement inside the content container and avoids duplicates if shortcode is present.
+ */
+add_filter('the_content', function ($content) {
+    if (!is_single() || !in_the_loop() || !is_main_query()) {
+        return $content;
+    }
+
+    // If user already inserted the shortcode manually, don't append again
+    if (stripos($content, '[show_commentary') !== false || stripos($content, '[post_commentary') !== false) {
+        return $content;
+    }
+
+    $postId = get_the_ID();
+    if (!$postId) {
+        return $content;
+    }
+
+    // Only append when there is commentary content
+    if (function_exists('get_field')) {
+        $commentary = get_field('post_commentary', $postId);
+        if (!empty($commentary)) {
+            // Append rendered shortcode so styling remains consistent
+            $content .= "\n\n" . do_shortcode('[show_commentary]');
+        }
+    }
+
+    return $content;
+}, 20);
 
 
 /**
