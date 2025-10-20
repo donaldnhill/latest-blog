@@ -3,6 +3,50 @@
 define('TAGDIV_ROOT', get_template_directory_uri());
 define('TAGDIV_ROOT_DIR', get_template_directory());
 
+// Debug user capabilities for post settings
+function debug_user_capabilities() {
+    if (is_admin() && current_user_can('edit_posts')) {
+        $user = wp_get_current_user();
+        $user_roles = $user->roles;
+        $user_caps = $user->allcaps;
+        
+        // Log to error log for debugging
+        error_log('=== USER CAPABILITIES DEBUG ===');
+        error_log('User ID: ' . $user->ID);
+        error_log('User Login: ' . $user->user_login);
+        error_log('User Roles: ' . print_r($user_roles, true));
+        error_log('Has publish_posts: ' . (current_user_can('publish_posts') ? 'YES' : 'NO'));
+        error_log('Has edit_posts: ' . (current_user_can('edit_posts') ? 'YES' : 'NO'));
+        error_log('Has edit_others_posts: ' . (current_user_can('edit_others_posts') ? 'YES' : 'NO'));
+        error_log('=== END DEBUG ===');
+    }
+}
+add_action('admin_init', 'debug_user_capabilities');
+
+// Ensure editors have publish_posts capability for post settings
+function ensure_editor_capabilities() {
+    $editor_role = get_role('editor');
+    if ($editor_role) {
+        // Force add all necessary capabilities for post settings
+        $editor_role->add_cap('publish_posts');
+        $editor_role->add_cap('edit_posts');
+        $editor_role->add_cap('edit_others_posts');
+        $editor_role->add_cap('edit_published_posts');
+        error_log('Ensured editor role has all post capabilities');
+    }
+}
+add_action('init', 'ensure_editor_capabilities');
+
+// Force show post settings for editors
+function force_show_post_settings_for_editors() {
+    if (current_user_can('edit_posts') && !current_user_can('publish_posts')) {
+        $user = wp_get_current_user();
+        $user->add_cap('publish_posts');
+        error_log('Force added publish_posts capability to user: ' . $user->user_login);
+    }
+}
+add_action('admin_init', 'force_show_post_settings_for_editors');
+
 // load the deploy mode
 require_once( TAGDIV_ROOT_DIR . '/tagdiv-deploy-mode.php' );
 
@@ -712,7 +756,8 @@ add_action('wp_head', function() {
         
         .post-commentary-simple .tdm-title-s-text {
             color: #a40d02;
-            font-size: 36px !important;
+            font-family: "Fira Sans", sans-serif;
+            font-size: 32px !important;
             font-weight: 700 !important;
             display: block;
             margin: 0;
@@ -722,6 +767,7 @@ add_action('wp_head', function() {
             margin: 1px 0 0;
             padding-top: 8px;
             color: #a40d02;
+            font-family: "Fira Sans", sans-serif;
             line-height: 1 !important;
             font-weight: 600 !important;
             text-transform: capitalize !important;
