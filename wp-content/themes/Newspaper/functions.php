@@ -209,6 +209,119 @@ add_shortcode('commentary_post', function($atts) {
     return ob_get_clean();
 });
 
+// Shortcode: [latest_commentary_list] - Display list of latest commentary posts
+add_shortcode('latest_commentary_list', function($atts) {
+    $atts = shortcode_atts(array(
+        'category' => 'commentary',
+        'posts_per_page' => 5,
+        'commentary_words' => 85,
+        'image_url' => 'https://dcocg8wgwokk8kcsoc48cogc.spicyauntie.net/wp-content/uploads/2025/10/Screenshot-2025-10-01-at-6.44.08-AM-1-e1759331810452.png',
+    ), $atts, 'latest_commentary_list');
+
+    // Get latest posts with commentary category
+    $q = new WP_Query(array(
+        'post_type' => 'post',
+        'posts_per_page' => intval($atts['posts_per_page']),
+        'category_name' => $atts['category'],
+        'orderby' => 'date',
+        'order' => 'DESC',
+        'ignore_sticky_posts' => true,
+        'no_found_rows' => true,
+    ));
+
+    if (!$q->have_posts()) {
+        return '<div style="background: #ffebee; padding: 20px; border: 1px solid #f44336; color: #d32f2f;">No posts found in category: ' . esc_html($atts['category']) . '. Please create posts with this category first.</div>';
+    }
+
+    // Start output
+    ob_start();
+    ?>
+    <div class="latest-commentary-list" style="max-width: 1200px; margin: 0 auto; padding-top: 20px; padding-bottom: 50px;">
+        <?php while ($q->have_posts()) : $q->the_post(); 
+            $post_id = get_the_ID();
+            $commentary = get_field('post_commentary', $post_id);
+        ?>
+        <a href="<?php echo esc_url(get_permalink($post_id)); ?>" style="text-decoration: none; color: inherit; display: block; margin-bottom: 20px;">
+            <div class="commentary-list-item" style="transition: transform 0.2s ease;">
+                
+                <!-- Header with Image and Title -->
+                <div class="commentary-item-header" style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <div class="commentary-item-image" style="width: 60px; height: 60px; margin-right: 15px; flex-shrink: 0;">
+                        <img src="<?php echo esc_url($atts['image_url']); ?>" alt="Commentary" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; border: 2px solid #a40d02;">
+                    </div>
+                    <div class="commentary-item-title" style="flex: 1;">
+                        <h3 style="margin: 0 6px 0 0; font-family: Merriweather !important; font-size: 16px !important; line-height: 1.5 !important; font-weight: 800 !important; color: #a40d02; word-wrap: break-word;">
+                            <?php echo esc_html(get_the_title($post_id)); ?>
+                        </h3>
+                        <p style="color: #666; font-size: 12px; margin: 2px 0 0 0; font-family: Merriweather;">
+                            <?php echo esc_html(get_the_date('F j, Y', $post_id)); ?>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Commentary Excerpt -->
+                <?php if (!empty($commentary)): ?>
+                <div class="commentary-item-content td-excerpt" style="display: block; margin: 4px 0; font-family: Merriweather !important; font-size: 14px !important; line-height: 1.5 !important; font-weight: 300 !important; text-align: left;">
+                    <?php 
+                    // Strip out images and HTML tags, keep only text
+                    $commentary_text = strip_tags($commentary, '<br><strong><em><b><i>');
+                    
+                    // Remove any remaining image tags and their content
+                    $commentary_text = preg_replace('/<img[^>]*>/i', '', $commentary_text);
+                    $commentary_text = preg_replace('/<figure[^>]*>.*?<\/figure>/is', '', $commentary_text);
+                    $commentary_text = preg_replace('/<div[^>]*class="[^"]*wp-block-image[^"]*"[^>]*>.*?<\/div>/is', '', $commentary_text);
+                    
+                    // Remove paragraph tags and clean up
+                    $commentary_text = preg_replace('/<p[^>]*>/i', '', $commentary_text);
+                    $commentary_text = preg_replace('/<\/p>/i', "\n", $commentary_text);
+                    
+                    // Clean up extra whitespace and remove all leading/trailing spaces
+                    $commentary_text = preg_replace('/\s+/', ' ', $commentary_text);
+                    $commentary_text = trim($commentary_text);
+                    $commentary_text = ltrim($commentary_text);
+                    
+                    // Remove any remaining leading spaces and limit to specified number of words
+                    $commentary_text = preg_replace('/^\s+/', '', $commentary_text);
+                    $commentary_excerpt = wp_trim_words($commentary_text, intval($atts['commentary_words']), '...');
+                    $commentary_excerpt = ltrim($commentary_excerpt);
+                    echo wp_kses_post($commentary_excerpt);
+                    ?>
+                </div>
+                <?php else: ?>
+                <div style="background: #fff3cd; padding: 10px; border: 1px solid #ffeaa7; color: #856404; font-size: 12px;">
+                    <strong>No commentary available for this post.</strong>
+                </div>
+                <?php endif; ?>
+
+            </div>
+        </a>
+        <?php endwhile; wp_reset_postdata(); ?>
+    </div>
+
+    <style>
+    .commentary-item-header:hover .commentary-item-image img {
+        transform: scale(1.05);
+        transition: transform 0.3s ease;
+    }
+    @media (max-width: 768px) {
+        .commentary-item-header {
+            flex-direction: column;
+            text-align: center;
+        }
+        .commentary-item-image {
+            margin-right: 0;
+            margin-bottom: 10px;
+        }
+        .commentary-list-item {
+            padding: 15px;
+        }
+    }
+    </style>
+    <?php
+
+    return ob_get_clean();
+});
+
 // Test shortcode to verify shortcodes are working
 add_shortcode('test_shortcode', function() {
     return '<div style="background: #f0f0f0; padding: 10px; border: 1px solid #ccc; margin: 10px 0;">TEST SHORTCODE IS WORKING!</div>';
