@@ -81,6 +81,142 @@ function force_register_post_settings_metabox() {
 }
 add_action('admin_init', 'force_register_post_settings_metabox');
 
+// Shortcode: [post_excerpt] - Display current post excerpt
+add_shortcode('post_excerpt', function($atts) {
+    $atts = shortcode_atts(array(
+        'post_id' => get_the_ID(),
+        'length' => 25,
+        'more' => '...',
+        'strip_tags' => true,
+    ), $atts, 'post_excerpt');
+
+    // Get the post
+    if ($atts['post_id']) {
+        $post = get_post($atts['post_id']);
+    } else {
+        $post = get_post();
+    }
+
+    if (!$post) {
+        return '';
+    }
+
+    // Get post excerpt
+    $excerpt = get_the_excerpt($post->ID);
+    
+    // If no excerpt, get content and create one
+    if (empty($excerpt)) {
+        $content = get_the_content(null, false, $post->ID);
+        if ($atts['strip_tags']) {
+            $content = strip_tags($content);
+        }
+        $excerpt = wp_trim_words($content, intval($atts['length']), $atts['more']);
+    } else {
+        $excerpt = wp_trim_words($excerpt, intval($atts['length']), $atts['more']);
+    }
+
+    return '<div class="post-excerpt-container" style="max-width: 600px; width: 100%; text-align: center; margin: 0 auto;"><div class="post-excerpt" style="font-family: Merriweather, serif !important; font-size: 18px; line-height: 1.5; color: #ffffff; text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7); margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">' . esc_html($excerpt) . '</div></div>';
+});
+
+// Shortcode: [commentary_post] - Get latest post with category 'commentary'
+add_shortcode('commentary_post', function($atts) {
+    $atts = shortcode_atts(array(
+        'category' => 'commentary',
+        'posts_per_page' => 1,
+        'commentary_lines' => 10,
+        'image_url' => 'https://dcocg8wgwokk8kcsoc48cogc.spicyauntie.net/wp-content/uploads/2025/10/Screenshot-2025-10-01-at-6.44.08-AM-1-e1759331810452.png',
+    ), $atts, 'commentary_post');
+
+    // Get latest post with commentary category
+    $q = new WP_Query(array(
+        'post_type' => 'post',
+        'posts_per_page' => intval($atts['posts_per_page']),
+        'category_name' => $atts['category'],
+        'orderby' => 'date',
+        'order' => 'DESC',
+        'ignore_sticky_posts' => true,
+        'no_found_rows' => true,
+    ));
+
+    if (!$q->have_posts()) {
+        return '<div class="commentary-post-not-found" style="text-align: center; padding: 20px; color: #666;">No commentary posts found.</div>';
+    }
+
+    $post = $q->posts[0];
+    $post_id = $post->ID;
+    
+    // Get commentary content
+    $commentary = get_field('post_commentary', $post_id);
+    if (empty($commentary)) {
+        return '<div class="commentary-post-no-commentary" style="text-align: center; padding: 20px; color: #666;">No commentary available for this post.</div>';
+    }
+
+    // Start output
+    ob_start();
+    ?>
+    <div class="commentary-post" style="background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 800px; margin: 0 auto;">
+        
+        <!-- Header with Image and Title -->
+        <div class="commentary-post-header" style="display: flex; align-items: center; margin-bottom: 20px;">
+            <div class="commentary-post-image" style="width: 80px; height: 80px; margin-right: 20px; flex-shrink: 0;">
+                <img src="<?php echo esc_url($atts['image_url']); ?>" alt="Commentary" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; border: 3px solid #a40d02;">
+            </div>
+            <div class="commentary-post-title" style="flex: 1;">
+                <h3 style="color: #a40d02; font-family: 'Fira Sans', sans-serif; font-size: 24px; font-weight: 700; margin: 0 0 5px 0; line-height: 1.2;">
+                    <?php echo esc_html(get_the_title($post_id)); ?>
+                </h3>
+                <p style="color: #666; font-size: 14px; margin: 0;">
+                    <?php echo esc_html(get_the_date('F j, Y', $post_id)); ?>
+                </p>
+            </div>
+        </div>
+
+        <!-- Commentary Content -->
+        <div class="commentary-post-content" style="font-family: 'Merriweather', serif; font-size: 16px; line-height: 1.6; color: #333; text-align: left;">
+            <?php 
+            // Limit to specified number of lines
+            $commentary_lines = explode("\n", $commentary);
+            $limited_lines = array_slice($commentary_lines, 0, intval($atts['commentary_lines']));
+            echo wp_kses_post(implode("\n", $limited_lines));
+            ?>
+        </div>
+
+        <!-- Read More Link -->
+        <div class="commentary-post-footer" style="text-align: center; margin-top: 20px;">
+            <a href="<?php echo esc_url(get_permalink($post_id)); ?>" style="color: #a40d02; text-decoration: none; font-weight: 600; font-family: 'Fira Sans', sans-serif;">
+                Read Full Commentary →
+            </a>
+        </div>
+
+    </div>
+
+    <style>
+    .commentary-post-header:hover .commentary-post-image img {
+        transform: scale(1.05);
+        transition: transform 0.3s ease;
+    }
+    .commentary-post-footer a:hover {
+        text-decoration: underline;
+    }
+    @media (max-width: 768px) {
+        .commentary-post-header {
+            flex-direction: column;
+            text-align: center;
+        }
+        .commentary-post-image {
+            margin-right: 0;
+            margin-bottom: 15px;
+        }
+        .commentary-post {
+            padding: 20px;
+        }
+    }
+    </style>
+    <?php
+
+    return ob_get_clean();
+});
+
 
 // load the deploy mode
 require_once( TAGDIV_ROOT_DIR . '/tagdiv-deploy-mode.php' );
