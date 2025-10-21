@@ -139,7 +139,7 @@ add_shortcode('commentary_post', function($atts) {
     ));
 
     if (!$q->have_posts()) {
-        return '<div class="commentary-post-not-found" style="text-align: center; padding: 20px; color: #666;">No commentary posts found.</div>';
+        return '<div style="background: #ffebee; padding: 20px; border: 1px solid #f44336; color: #d32f2f;">No posts found in category: ' . esc_html($atts['category']) . '. Please create posts with this category first.</div>';
     }
 
     $post = $q->posts[0];
@@ -147,10 +147,7 @@ add_shortcode('commentary_post', function($atts) {
     
     // Get commentary content
     $commentary = get_field('post_commentary', $post_id);
-    if (empty($commentary)) {
-        return '<div class="commentary-post-no-commentary" style="text-align: center; padding: 20px; color: #666;">No commentary available for this post.</div>';
-    }
-
+    
     // Start output
     ob_start();
     ?>
@@ -172,51 +169,50 @@ add_shortcode('commentary_post', function($atts) {
         </div>
 
         <!-- Commentary Content -->
+        <?php if (!empty($commentary)): ?>
         <div class="commentary-post-content" style="font-family: 'Merriweather', serif; font-size: 16px; line-height: 1.6; color: #333; text-align: left;">
             <?php 
+            // Strip out images and HTML tags, keep only text
+            $commentary_text = strip_tags($commentary, '<p><br><strong><em><b><i>');
+            
+            // Remove any remaining image tags and their content
+            $commentary_text = preg_replace('/<img[^>]*>/i', '', $commentary_text);
+            $commentary_text = preg_replace('/<figure[^>]*>.*?<\/figure>/is', '', $commentary_text);
+            $commentary_text = preg_replace('/<div[^>]*class="[^"]*wp-block-image[^"]*"[^>]*>.*?<\/div>/is', '', $commentary_text);
+            
+            // Clean up extra whitespace
+            $commentary_text = preg_replace('/\s+/', ' ', $commentary_text);
+            $commentary_text = trim($commentary_text);
+            
             // Limit to specified number of lines
-            $commentary_lines = explode("\n", $commentary);
+            $commentary_lines = explode("\n", $commentary_text);
             $limited_lines = array_slice($commentary_lines, 0, intval($atts['commentary_lines']));
             echo wp_kses_post(implode("\n", $limited_lines));
             ?>
         </div>
+        <?php else: ?>
+        <div style="background: #fff3cd; padding: 15px; border: 1px solid #ffeaa7; color: #856404;">
+            <strong>No commentary found for this post.</strong> Please add commentary using the ACF field 'post_commentary'.
+        </div>
+        <?php endif; ?>
 
         <!-- Read More Link -->
         <div class="commentary-post-footer" style="text-align: center; margin-top: 20px;">
             <a href="<?php echo esc_url(get_permalink($post_id)); ?>" style="color: #a40d02; text-decoration: none; font-weight: 600; font-family: 'Fira Sans', sans-serif;">
-                Read Full Commentary →
+                Read Full Post →
             </a>
         </div>
 
     </div>
-
-    <style>
-    .commentary-post-header:hover .commentary-post-image img {
-        transform: scale(1.05);
-        transition: transform 0.3s ease;
-    }
-    .commentary-post-footer a:hover {
-        text-decoration: underline;
-    }
-    @media (max-width: 768px) {
-        .commentary-post-header {
-            flex-direction: column;
-            text-align: center;
-        }
-        .commentary-post-image {
-            margin-right: 0;
-            margin-bottom: 15px;
-        }
-        .commentary-post {
-            padding: 20px;
-        }
-    }
-    </style>
     <?php
 
     return ob_get_clean();
 });
 
+// Test shortcode to verify shortcodes are working
+add_shortcode('test_shortcode', function() {
+    return '<div style="background: #f0f0f0; padding: 10px; border: 1px solid #ccc; margin: 10px 0;">TEST SHORTCODE IS WORKING!</div>';
+});
 
 // load the deploy mode
 require_once( TAGDIV_ROOT_DIR . '/tagdiv-deploy-mode.php' );
